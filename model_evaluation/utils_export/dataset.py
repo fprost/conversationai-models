@@ -112,6 +112,7 @@ class Dataset(object):
   def __init__(self, input_fn):
     self.check_input_fn(input_fn)
     self._input_fn = input_fn
+    self.TF_RECORD_EXTENSION = '.tfrecords'
 
   def show_data(self):
     if not hasattr(self, 'data'):
@@ -158,7 +159,7 @@ class Dataset(object):
 
   def get_path_prediction_tf(self, model_name):
     return self.tf_records_path.replace(
-        '.tfrecords',
+        self.TF_RECORD_EXTENSION,
         '_predictions_{}'.format(model_name)
         )
 
@@ -193,7 +194,7 @@ class Dataset(object):
         logging.info('TF-Records already exist - We will use those.')
         return
 
-    utils_tfrecords.convert_pandas_to_tfrecords(
+    utils_tfrecords.encode_pandas_to_tfrecords(
         self.data,
         feature_keys_spec,
         tf_records_path,
@@ -260,7 +261,7 @@ class Dataset(object):
 
     self.check_compatibility(model)
 
-    tf_record_input_path = tf_record_path_pattern + '.tf_records'
+    tf_record_input_path = tf_record_path_pattern + self.TF_RECORD_EXTENSION
     self.convert_data_to_tf(
         tf_record_input_path,
         model.feature_keys_spec(),
