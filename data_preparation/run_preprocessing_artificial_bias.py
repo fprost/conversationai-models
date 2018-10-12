@@ -27,11 +27,9 @@ def _parse_arguments(argv):
       help='Directory where to write train, eval and test data')
   parser.add_argument('--input_data_path')
   parser.add_argument(
-      '--oversample_rate',
-      required=False,
-      default=5,
-      type=int,
-      help='How many times to oversample the targeted class')
+      '--sampling_strategy',
+      required=True,
+      help='Strategy to use to sample the data')
   args = parser.parse_args(args=argv[1:])
   return args
 
@@ -89,7 +87,7 @@ def main():
         pipeline,
         train_input_data_path=args.input_data_path,
         output_folder=args.output_folder,
-        oversample_rate=args.oversample_rate)
+        sampling_strategy=args.sampling_strategy)
 
 
 if __name__ == '__main__':
