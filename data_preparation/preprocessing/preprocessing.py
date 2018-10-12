@@ -8,6 +8,7 @@ import tensorflow as tf
 from tensorflow_transform import coders
 
 import constants
+import strategy
 import tfrecord_utils
 
 
@@ -84,29 +85,13 @@ def write_to_tf_records(examples, output_path):
 class OversampleExample(beam.DoFn):
   """Oversamples examples from a given class."""
 
-  def __init__(self, rule_fn, oversample_rate):
-    if (oversample_rate <= 0) or not isinstance(oversample_rate, int):
-      raise ValueError('oversample_rate should be a positive integer.')
-    self._rule_fn = rule_fn
-    self._oversample_rate = oversample_rate
+  def __init__(self, bias_strategy):
+    self._bias_strategy = bias_strategy
 
   def process(self, element):
-    if self._rule_fn(element):
-      for _ in range(self._oversample_rate):
-        yield element
-    else:
+    n_samples = self._bias_strategy.apply_sample_rate(element)
+    for _ in range(n_samples):
       yield element
-
-
-def _select_male_toxic_example(example,
-                               threshold_identity=0.5,
-                               threshold_toxic=0.5):
-  is_toxic = example['toxicity'] >= threshold_toxic
-  if 'male' in example:
-    is_male = example['male'] >= threshold_identity
-  else:
-    is_male = False
-  return is_toxic and is_male
 
 
 def run_data_split(p,
@@ -165,7 +150,7 @@ def run_data_split(p,
 def run_artificial_bias(p,
                         train_input_data_path,
                         output_folder,
-                        oversample_rate):
+                        sampling_strategy):
   """Main function to create artificial bias.
 
   Args:
@@ -175,8 +160,14 @@ def run_artificial_bias(p,
         training dataset. This artificial bias method should not be run on
         eval/test.
     output_folder: Folder to save the train/eval/test datasets.
-    oversample_rate: How many times to oversample the targeted class.
+    sampling_strategy: A `Strategy` instance to define how to create the bias.
+
+  Raises:
+    ValueError if sampling_strategy is not valid.
   """
+
+  if sampling_strategy not in constants.STRATEGIES:
+    raise ValueError('Sampling strategy should be listed in STRATEGIES.')
 
   train_data = (p
                 | 'ReadExamples' >> beam.io.tfrecordio.ReadFromTFRecord(
@@ -185,10 +176,10 @@ def run_artificial_bias(p,
                     feature_spec=get_civil_comments_spec(),
                     optional_field_names=get_identity_list())))
 
+  bias_strategy = constants.STRATEGIES[sampling_strategy]
   train_data_artificially_biased = (
       train_data
-      | 'CreateBias' >> beam.ParDo(OversampleExample(
-          _select_male_toxic_example, oversample_rate)))
+      | 'CreateBias' >> beam.ParDo(OversampleExample(bias_strategy())))
 
   write_to_tf_records(
       train_data_artificially_biased,

@@ -69,7 +69,8 @@ We recommend using a small dataset 'train_small.tfrecord'.
   python run_preprocessing_artificial_bias.py \
     --job_dir 'local_data' \
     --input_data_path 'local_data/train_eval_test/train*.tfrecord' \
-    --output_folder 'local_data/artificial_bias'
+    --output_folder 'local_data/artificial_bias' \
+    --sampling_strategy 'strategy1'
   ```
 
 #### Creates the artificial_bias on the cloud
@@ -82,5 +83,6 @@ We recommend using a small dataset 'train_small.tfrecord'.
     --job_dir gs://kaggle-model-experiments/dataflow/$JOB_NAME \
     --input_data_path 'gs://kaggle-model-experiments/resources/civil_comments_data/train_eval_test/train*.tfrecord' \
     --output_folder gs://kaggle-model-experiments/resources/civil_comments_data/artificial_bias/${USER}/${NOW} \
+    --sampling_strategy 'strategy1' \
     --cloud
   ```
