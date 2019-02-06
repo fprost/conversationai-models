@@ -17,7 +17,7 @@ def get_bios_bias_spec():
   spec = {
       'comment_text': tf.FixedLenFeature([], dtype=tf.string),
       'gender': tf.FixedLenFeature([], dtype=tf.string),
-      'title': tf.FixedLenFeature([], dtype=tf.string),
+      'title': tf.FixedLenFeature([], dtype=tf.int32),
   }
   return spec
 
@@ -86,6 +86,21 @@ class ProcessText(beam.DoFn):
     yield element
 
 
+class ProcessLabel(beam.DoFn):
+
+  def __init__(self):
+    self._vocabulary =  [
+        'accountant', 'acupuncturist', 'architect', 'attorney', 'chiropractor', 'comedian', 'composer', 'dentist',
+        'dietitian', 'dj', 'filmmaker', 'interior_designer', 'journalist', 'landscape_architect', 'magician',
+        'massage_therapist', 'model', 'nurse', 'painter', 'paralegal', 'pastor', 'personal_trainer',
+        'photographer', 'physician', 'poet', 'professor', 'psychologist', 'rapper',
+        'real_estate_broker', 'software_engineer', 'surgeon', 'teacher', 'yoga_teacher']
+
+  def process(self, element):
+    element['title'] = self._vocabulary.index(element['title'])
+    yield element
+
+
 def run(p, input_data_path, train_fraction, eval_fraction,
                    output_folder):
   """Runs preprocessing pipeline for biosbias.
@@ -116,6 +131,7 @@ def run(p, input_data_path, train_fraction, eval_fraction,
         column_names=['raw', 'start_pos', 'gender', 'title'])))
 
   data = raw_data | beam.ParDo(ProcessText())
+  data = data | beam.ParDo(ProcessLabel())
 
   split = split_data(data, train_fraction, eval_fraction)
   train_data = split[0]
