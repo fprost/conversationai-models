@@ -4,6 +4,7 @@ import os
 import random
 
 import apache_beam as beam
+import pickle as pkl
 import tensorflow as tf
 from tensorflow_transform import coders
 
@@ -11,39 +12,34 @@ import constants
 import tfrecord_utils
 
 
-def get_identity_list():
-  return [
-      'male', 'female', 'transgender', 'other_gender', 'heterosexual',
-      'homosexual_gay_or_lesbian', 'bisexual', 'other_sexual_orientation',
-      'christian', 'jewish', 'muslim', 'hindu', 'buddhist', 'atheist',
-      'other_religion', 'black', 'white', 'asian', 'latino',
-      'other_race_or_ethnicity', 'physical_disability',
-      'intellectual_or_learning_disability', 'psychiatric_or_mental_illness',
-      'other_disability'
-  ]
 
-
-def get_civil_comments_spec(include_identity_terms=True):
-  """Returns the spec of the civil_comments dataset."""
+def get_bios_bias_spec():
   spec = {
       'comment_text': tf.FixedLenFeature([], dtype=tf.string),
-      'id': tf.FixedLenFeature([], dtype=tf.string),
-      'toxicity': tf.FixedLenFeature([], dtype=tf.float32),
-      'severe_toxicity': tf.FixedLenFeature([], dtype=tf.float32),
-      'obscene': tf.FixedLenFeature([], dtype=tf.float32),
-      'sexual_explicit': tf.FixedLenFeature([], dtype=tf.float32),
-      'identity_attack': tf.FixedLenFeature([], dtype=tf.float32),
-      'insult': tf.FixedLenFeature([], dtype=tf.float32),
-      'threat': tf.FixedLenFeature([], dtype=tf.float32),
-      'toxicity_annotator_count': tf.FixedLenFeature([], dtype=tf.int64),
-      'identity_annotator_count': tf.FixedLenFeature([], dtype=tf.int64),
+      'gender': tf.FixedLenFeature([], dtype=tf.string),
+      'title': tf.FixedLenFeature([], dtype=tf.string),
   }
-  if include_identity_terms:
-    for identity in get_identity_list():
-      spec[identity] = tf.FixedLenFeature([],
-                                          dtype=tf.float32,
-                                          default_value=-1.0)
   return spec
+
+
+class PklFileSource(beam.io.filebasedsource.FileBasedSource):
+  """Beam source for CSV files."""
+
+  def __init__(self, file_pattern, column_names):
+    self._column_names = column_names
+    super(self.__class__, self).__init__(file_pattern)
+
+  def read_records(self, file_name, unused_range_tracker):
+    self._file = self.open_file(file_name)
+    data = pkl.load(self._file)
+    LIMIT = float('inf')
+    k=0
+    for el in data:
+      res = {key: el[key] for key in el if key in self._column_names}
+      yield res
+      k+=1
+      if k> LIMIT:
+        break
 
 
 def split_data(examples, train_fraction, eval_fraction):
@@ -78,44 +74,22 @@ def write_to_tf_records(examples, output_path):
       shuff_ex
       | 'Serialize_' + output_path_prefix >> beam.ParDo(
           tfrecord_utils.EncodeTFRecord(
-              feature_spec=get_civil_comments_spec(),
-              optional_field_names=get_identity_list()))
+              feature_spec=get_bios_bias_spec(),
+              optional_field_names=[]))
       | 'WriteToTF_' + output_path_prefix >> beam.io.WriteToTFRecord(
           file_path_prefix=output_path, file_name_suffix='.tfrecord'))
 
 
-class OversampleExample(beam.DoFn):
-  """Oversamples examples from a given class."""
-
-  def __init__(self, rule_fn, oversample_rate):
-    if (oversample_rate <= 0) or not isinstance(oversample_rate, int):
-      raise ValueError('oversample_rate should be a positive integer.')
-    self._rule_fn = rule_fn
-    self._oversample_rate = oversample_rate
-
+class ProcessText(beam.DoFn):
   def process(self, element):
-    if self._rule_fn(element):
-      for _ in range(self._oversample_rate):
-        yield element
-    else:
-      yield element
+    element['comment_text'] = element['raw'][element['start_pos']:]
+    yield element
 
 
-def _select_male_toxic_example(example,
-                               threshold_identity=0.5,
-                               threshold_toxic=0.5):
-  is_toxic = example['toxicity'] >= threshold_toxic
-  if 'male' in example:
-    is_male = example['male'] >= threshold_identity
-  else:
-    is_male = False
-  return is_toxic and is_male
-
-
-def run_data_split(p, input_data_path, train_fraction, eval_fraction,
+def run(p, input_data_path, train_fraction, eval_fraction,
                    output_folder):
-  """Splits the data into train/eval/test.
-
+  """Runs preprocessing pipeline for biosbias.
+  
   Args:
     p: Beam pipeline for constructing PCollections and applying PTransforms.
     input_data_path: Input TF Records.
@@ -136,18 +110,14 @@ def run_data_split(p, input_data_path, train_fraction, eval_fraction,
     raise ValueError('Output directory should be empty.'
                      ' You should select a different path.')
 
-  examples = (
-      p
-      | 'ReadExamples' >>
-      beam.io.tfrecordio.ReadFromTFRecord(file_pattern=input_data_path))
-  examples = (
-      examples
-      | 'DecodeTFRecord' >> beam.ParDo(
-          tfrecord_utils.DecodeTFRecord(
-              feature_spec=get_civil_comments_spec(),
-              optional_field_names=get_identity_list())))
+  raw_data = (p
+    | "ReadTrainData" >> beam.io.Read(PklFileSource(
+        input_data_path,
+        column_names=['raw', 'start_pos', 'gender', 'title'])))
 
-  split = split_data(examples, train_fraction, eval_fraction)
+  data = raw_data | beam.ParDo(ProcessText())
+
+  split = split_data(data, train_fraction, eval_fraction)
   train_data = split[0]
   eval_data = split[1]
   test_data = split[2]
@@ -158,34 +128,3 @@ def run_data_split(p, input_data_path, train_fraction, eval_fraction,
                       os.path.join(output_folder, constants.EVAL_DATA_PREFIX))
   write_to_tf_records(test_data,
                       os.path.join(output_folder, constants.TEST_DATA_PREFIX))
-
-
-def run_artificial_bias(p, train_input_data_path, output_folder,
-                        oversample_rate):
-  """Main function to create artificial bias.
-
-  Args:
-    p: Beam pipeline for constructing PCollections and applying PTransforms.
-    train_input_data_path: Input TF Records, which is typically the training
-      dataset. This artificial bias method should not be run on eval/test.
-    output_folder: Folder to save the train/eval/test datasets.
-    oversample_rate: How many times to oversample the targeted class.
-  """
-
-  train_data = (
-      p
-      | 'ReadExamples' >>
-      beam.io.tfrecordio.ReadFromTFRecord(file_pattern=train_input_data_path)
-      | 'DecodeTFRecord' >> beam.ParDo(
-          tfrecord_utils.DecodeTFRecord(
-              feature_spec=get_civil_comments_spec(),
-              optional_field_names=get_identity_list())))
-
-  train_data_artificially_biased = (
-      train_data
-      | 'CreateBias' >> beam.ParDo(
-          OversampleExample(_select_male_toxic_example, oversample_rate)))
-
-  write_to_tf_records(
-      train_data_artificially_biased,
-      os.path.join(output_folder, constants.TRAIN_ARTIFICIAL_BIAS_PREFIX))
