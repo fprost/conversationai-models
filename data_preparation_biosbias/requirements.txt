@@ -1,4 +1,5 @@
-apache-beam[gcp]==2.2.0
+apache-beam[gcp]==2.10.0
 configparser==3.5.0
 tensorflow==1.10
 tensorflow_transform==0.9
+protobuf==3.6.1

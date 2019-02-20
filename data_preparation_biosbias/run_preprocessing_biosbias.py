@@ -20,11 +20,7 @@ def _parse_arguments(argv):
   parser.add_argument(
       '--job_dir',
       required=True,
-      help='Directory in which to stage code and write temporary outputs')
-  parser.add_argument(
-      '--output_folder',
-      required=True,
-      help='Directory where to write train, eval and test data')
+      help='Directory in which to stage code and write temporary outputs and where to write output')
   parser.add_argument('--input_data_path')
   parser.add_argument(
       '--train_fraction',
@@ -94,7 +90,7 @@ def main():
         input_data_path=args.input_data_path,
         train_fraction=args.train_fraction,
         eval_fraction=args.eval_fraction,
-        output_folder=args.output_folder)
+        output_folder=args.job_dir)
 
 
 if __name__ == '__main__':
