@@ -107,14 +107,16 @@ class TFRNNModel(base_model.BaseModel):
           n_classes=FLAGS.n_classes,
           name=self._target_labels[0])
 
-    multi_class_labels = labels[self._target_labels[0]]
-    multi_class_labels = tf.cast(multi_class_labels, tf.int32)
-    multi_class_labels = tf.reshape(multi_class_labels, [-1])
+    
     if mode != tf.estimator.ModeKeys.PREDICT:
       predictions = tf.argmax(logits, 1)
-
+      multi_class_labels = labels[self._target_labels[0]]
+      multi_class_labels = tf.cast(multi_class_labels, tf.int32)
+      multi_class_labels = tf.reshape(multi_class_labels, [-1])
       tf.summary.histogram('truth_labels', multi_class_labels)
       tf.summary.histogram('predictions', predictions)
+    else:
+      multi_class_labels = None
 
 
     optimizer = tf.train.AdamOptimizer(learning_rate=params.learning_rate)
