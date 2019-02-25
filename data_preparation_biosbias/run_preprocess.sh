@@ -6,6 +6,5 @@ JOB_NAME=data-preparation-$NOW
 python run_preprocessing_biosbias.py \
   --job_name $JOB_NAME \
   --job_dir gs://conversationai-models/biosbias/dataflow_dir/$JOB_NAME \
-  --input_data_path gs://conversationai-models/biosbias/input_data/BIOS_python2.pkl \
+  --input_data_path gs://conversationai-models/biosbias/input_data/files_from_gce/BIOS.txt \
   --cloud
-

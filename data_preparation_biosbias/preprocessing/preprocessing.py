@@ -4,7 +4,7 @@ import os
 import random
 
 import apache_beam as beam
-import pickle as pkl
+import json
 import tensorflow as tf
 from tensorflow_transform import coders
 
@@ -21,24 +21,21 @@ def get_bios_bias_spec():
   return spec
 
 
-class PklFileSource(beam.io.filebasedsource.FileBasedSource):
-  """Beam source for CSV files."""
+@beam.ptransform_fn
+def ReadJsonData(p, path, parser=json.loads):
+  """Ingests a json file into the pipeline.
 
-  def __init__(self, file_pattern, column_names):
-    self._column_names = column_names
-    super(self.__class__, self).__init__(file_pattern)
+  Args:
+    p: a pCollection to read the data into.
+    path: the directory or bucket holding the json data.
+    parser: string -> any function to decode the json.
 
-  def read_records(self, file_name, unused_range_tracker):
-    self._file = self.open_file(file_name)
-    data = pkl.load(self._file)
-    LIMIT = float('inf')
-    k = 0
-    for el in data:
-      res = {key: el[key] for key in el if key in self._column_names}
-      yield res
-      k += 1
-      if k > LIMIT:
-        break
+  Returns:
+    A pCollection of injested inputs.
+  """
+  return (p
+          | "ReadBlob" >> beam.io.ReadFromText(path)
+          | "BlobToJson" >> beam.Map(parser))
 
 
 def split_data(examples, train_fraction, eval_fraction):
@@ -101,7 +98,7 @@ def run(p, input_data_path, train_fraction, eval_fraction,
   
   Args:
     p: Beam pipeline for constructing PCollections and applying PTransforms.
-    input_data_path: Input TF Records.
+    input_data_path: Input text file.
     train_fraction: Fraction of the data to be allocated to the training set.
     eval_fraction: Fraction of the data to be allocated to the eval set.
     output_folder: Folder to save the train/eval/test datasets.
@@ -120,9 +117,7 @@ def run(p, input_data_path, train_fraction, eval_fraction,
                      ' You should select a different path.')
 
   raw_data = (p
-    | "ReadTrainData" >> beam.io.Read(PklFileSource(
-        input_data_path,
-        column_names=['raw', 'start_pos', 'gender', 'title'])))
+    | "ReadTrainData" >> ReadJsonData(input_data_path))
 
   data = raw_data | beam.ParDo(ProcessText())
   data = data | beam.ParDo(ProcessLabel(vocabulary=constants.TITLE_LABELS))
