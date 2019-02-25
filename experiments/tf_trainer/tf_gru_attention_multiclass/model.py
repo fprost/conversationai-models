@@ -101,7 +101,7 @@ class TFRNNModel(base_model.BaseModel):
       logits = tf.layers.dropout(logits, rate=params.dropout_rate)
     logits = tf.layers.dense(
         inputs=logits, units=FLAGS.n_classes, activation=None)
-    
+
     # TODO: Verify why we need to give -Nclasses twice 
     multi_class_head = tf.contrib.estimator.multi_class_head(
           n_classes=FLAGS.n_classes,
@@ -110,6 +110,13 @@ class TFRNNModel(base_model.BaseModel):
     multi_class_labels = labels[self._target_labels[0]]
     multi_class_labels = tf.cast(multi_class_labels, tf.int32)
     multi_class_labels = tf.reshape(multi_class_labels, [-1])
+    if mode != tf.estimator.ModeKeys.PREDICT:
+      predictions = tf.argmax(logits, 1)
+
+      tf.summary.histogram('truth_labels', multi_class_labels)
+      tf.summary.histogram('predictions', predictions)
+
+
     optimizer = tf.train.AdamOptimizer(learning_rate=params.learning_rate)
     return multi_class_head.create_estimator_spec(
         features=features,
