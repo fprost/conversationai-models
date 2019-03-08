@@ -66,19 +66,9 @@ py_test(
 py_library(
     name = "base_model",
     srcs = [
-        "base_keras_model.py",
         "base_model.py",
     ],
     deps = [":types"],
-)
-
-py_test(
-    name = "base_keras_model_test",
-    srcs = ["base_keras_model_test.py"],
-    deps = [
-        ":base_model",
-        ":types",
-    ],
 )
 
 py_library(
@@ -112,5 +102,15 @@ py_test(
     deps = [
         ":cnn_spec_parser",
         ":types",
+    ],
+)
+
+py_library(
+    name = "episodic_tfrecord_input",
+    srcs = ["episodic_tfrecord_input.py"],
+    deps = [
+        ":types",
+        ":base_model",
+        ":data_input",
     ],
 )
