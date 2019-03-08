@@ -16,6 +16,13 @@ elif [ "$1" == "toxicity" ]; then
     labels="frac_neg"
     label_dtypes="float"
 
+elif [ "$1" == "biosbias" ]; then
+    train_path="gs://conversationai-models/biosbias/dataflow_dir/data-preparation-20190220165938/train*.tfrecord"
+    valid_path="gs://conversationai-models/biosbias/dataflow_dir/data-preparation-20190220165938/eval*.tfrecord"
+    labels="title"
+    label_dtypes="int"
+
+
 elif [ "$1" == "many_communities" ]; then
     train_path="${GCS_RESOURCES}/transfer_learning_data/many_communities/20181105_train.tfrecord"
     valid_path="${GCS_RESOURCES}/transfer_learning_data/many_communities/20181105_validate.tfrecord"
@@ -25,6 +32,6 @@ elif [ "$1" == "many_communities" ]; then
     label_dtypes="int"
 
 else
-    echo "First positional arg must be one of civil_comments, toxicity, many_communities."
+    echo "First positional arg must be one of civil_comments, toxicity, many_communities, biosbias."
     exit 1
 fi

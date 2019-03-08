@@ -48,6 +48,8 @@ tf.app.flags.DEFINE_string('model_dir', None,
                            "Directory for the Estimator's model directory.")
 tf.app.flags.DEFINE_bool('enable_profiling', False,
                          'Enable profiler hook in estimator.')
+tf.app.flags.DEFINE_bool('early_stopping', False,
+                         'Activate early stopping in training loop.')
 tf.app.flags.DEFINE_integer(
     'n_export', -1, 'Number of models to export.'
     'If =-1, only the best checkpoint (wrt specified eval metric) is exported.'
@@ -55,7 +57,6 @@ tf.app.flags.DEFINE_integer(
     'If >1, we export `n_export` evenly-spaced checkpoints.')
 tf.app.flags.DEFINE_string('key_name', 'comment_key',
                            'Name of a pass-thru integer id for batch scoring.')
-
 tf.app.flags.DEFINE_integer('train_steps', 100000,
                             'The number of steps to train for.')
 tf.app.flags.DEFINE_integer('eval_period', 1000,
@@ -193,15 +194,24 @@ class ModelTrainer(object):
     self._estimator = model.estimator(self._model_dir())
 
   def train_with_eval(self):
-    """Train with periodic evaluation.
-    """
-    training_hooks = None
+    """Train with periodic evaluation."""
+    training_hooks = []
     if FLAGS.enable_profiling:
       training_hooks = [
           tf.train.ProfilerHook(
               save_steps=10,
               output_dir=os.path.join(self._model_dir(), 'profiler')),
       ]
+    if FLAGS.early_stopping:
+      min_steps = min(2*FLAGS.eval_period, 500)
+      # Need to initialize eval dir, otherwise early will raise an error.
+      tf.gfile.MakeDirs(self._estimator.eval_dir())
+      early_stopping = tf.contrib.estimator.stop_if_no_decrease_hook(
+          self._estimator,
+          metric_name='loss',
+          max_steps_without_decrease=20000,
+          min_steps=min_steps)
+      training_hooks.append(early_stopping)
 
     train_spec = tf.estimator.TrainSpec(
         input_fn=self._dataset.train_input_fn,
