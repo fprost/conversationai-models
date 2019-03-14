@@ -184,18 +184,47 @@ def forward_features(estimator, keys, sparse_default_values=None):
       config=estimator.config)
 
 
+
+class InitHook(tf.train.SessionRunHook):
+    """initializes model from a checkpoint_path
+    args:
+        modelPath: full path to checkpoint
+    """
+    def __init__(self, modelPath, vars_to_warm_start="^((?!final_layer).)*$"):
+        self.modelPath = modelPath
+        self.initialized = False
+        self._vars_to_warm_start = vars_to_warm_start
+
+    def begin(self):
+        """
+        Restore encoder parameters if a pre-trained encoder model is available and we haven't trained previously
+        """
+        if not self.initialized:
+            checkpoint = tf.train.latest_checkpoint(self.modelPath)
+            if checkpoint is None:
+                tf.logging.info('No pre-trained model is available, training from scratch.')
+            else:
+                tf.logging.info('Pre-trained model {0} found in {1} - warmstarting.'.format(checkpoint, self.modelPath))
+                tf.train.warm_start(checkpoint, vars_to_warm_start=self._vars_to_warm_start)
+            self.initialized = True
+
+
 class ModelTrainer(object):
   """Model Trainer."""
 
   def __init__(self, dataset: ds.DatasetInput,
-               model: base_model.BaseModel) -> None:
+               model: base_model.BaseModel,
+               warmstart_dir: str = None) -> None:
     self._dataset = dataset
     self._model = model
     self._estimator = model.estimator(self._model_dir())
+    self._warmstart_dir = warmstart_dir
 
   def train_with_eval(self):
     """Train with periodic evaluation."""
     training_hooks = []
+    if self._warmstart_dir:
+      training_hooks.append(InitHook(self._warmstart_dir))
     if FLAGS.enable_profiling:
       training_hooks = [
           tf.train.ProfilerHook(
