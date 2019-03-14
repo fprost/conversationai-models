@@ -49,6 +49,7 @@ class TextPreprocessor(object):
   def __init__(self, embeddings_path: str) -> None:
     self._word_to_idx, self._embeddings_matrix, self._unknown_token, self._embedding_size = \
       LoadTokenIdxEmbeddings(embeddings_path)  # type: Tuple[Dict[str, int], np.ndarray, int, int]
+    tf.logging.info('Embedding size is: {}'.format(self._embeddings_matrix.shape))
 
   def train_preprocess_fn(self,
                           tokenizer: Callable[[str], List[str]],
@@ -179,6 +180,7 @@ class TextPreprocessor(object):
   def word_embeddings(self, trainable) -> tf.Variable:
     """Get word embedding TF Variable."""
 
+    tf.logging.info('Setting embeddings with finetuning={}'.format(trainable))
     embeddings = tf.get_variable(
         'embeddings', self._embeddings_matrix.shape, trainable=trainable)
 

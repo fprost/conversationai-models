@@ -42,15 +42,15 @@ elif [ "$1" == "toxicity" ]; then
     config="tf_trainer/common/basic_gpu_config.yaml"
 
 elif [ "$1" == "biosbias" ]; then
-    batch_size=32
+    batch_size=16
     attention_units=32
-    dropout_rate=0.69999994803861521
-    learning_rate=0.00030340058446715442
-    dense_units='128'
-    gru_units='128,128'
-    train_steps=250000
-    eval_period=1000
-    eval_steps=6000
+    dropout_rate=0.6
+    learning_rate=0.0001
+    dense_units='64,64'
+    gru_units='128'
+    train_steps=150000
+    eval_period=2500
+    eval_steps=1000
     config="tf_trainer/common/basic_gpu_config.yaml"
 
 elif [ "$1" == "many_communities" ]; then
@@ -81,7 +81,7 @@ gcloud ml-engine jobs submit training tf_trainer_${MODEL_NAME_DATA}_${USER}_${DA
     -- \
     --train_path=$train_path \
     --validate_path=$valid_path \
-    --embeddings_path="${GCS_RESOURCES}/glove.6B/glove.6B.100d.txt" \
+    --embeddings_path="${GCS_RESOURCES}/glove.6B/glove.6B.100d-normalized.txt" \
     --model_dir="${JOB_DIR}/model_dir" \
     --labels=$labels \
     --label_dtypes=$label_dtypes \
@@ -94,4 +94,6 @@ gcloud ml-engine jobs submit training tf_trainer_${MODEL_NAME_DATA}_${USER}_${DA
     --gru_units=$gru_units \
     --train_steps=$train_steps \
     --eval_period=$eval_period \
-    --eval_steps=$eval_steps
+    --eval_steps=$eval_steps \
+    --early_stopping=True \
+    --is_embedding_trainable=True

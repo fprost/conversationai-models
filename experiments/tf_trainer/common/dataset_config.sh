@@ -17,11 +17,10 @@ elif [ "$1" == "toxicity" ]; then
     label_dtypes="float"
 
 elif [ "$1" == "biosbias" ]; then
-    train_path="gs://conversationai-models/biosbias/dataflow_dir/data-preparation-20190220165938/train*.tfrecord"
-    valid_path="gs://conversationai-models/biosbias/dataflow_dir/data-preparation-20190220165938/eval*.tfrecord"
+    train_path="gs://conversationai-models/biosbias/dataflow_dir/data-preparation-20190225173815/train*.tfrecord"
+    valid_path="gs://conversationai-models/biosbias/dataflow_dir/data-preparation-20190225173815/eval*.tfrecord"
     labels="title"
     label_dtypes="int"
-
 
 elif [ "$1" == "many_communities" ]; then
     train_path="${GCS_RESOURCES}/transfer_learning_data/many_communities/20181105_train.tfrecord"

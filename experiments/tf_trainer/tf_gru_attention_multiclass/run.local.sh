@@ -20,13 +20,13 @@ learning_rate=0.00030340058446715442
 dense_units='128'
 gru_units='128,128'
 train_steps=250000
-eval_period=1000
-eval_steps=6000
+eval_period=500
+eval_steps=1000
 
 python -m tf_trainer.tf_gru_attention_multiclass.run \
   --train_path=$train_path \
   --validate_path=$valid_path \
-  --embeddings_path="${GCS_RESOURCES}/glove.6B/glove.6B.100d.txt" \
+  --embeddings_path="${GCS_RESOURCES}/glove.6B/glove.6B.100d-superhard-debiased_03012019.txt" \
   --model_dir="tf_gru_attention_multiclass_local_model_dir" \
   --labels=$labels \
   --label_dtypes=$label_dtypes \
@@ -37,6 +37,9 @@ python -m tf_trainer.tf_gru_attention_multiclass.run \
   --learning_rate=$learning_rate \
   --dense_units=$dense_units \
   --gru_units=$gru_units \
-  --train_steps=$train_steps \
+  --train_steps=500000 \
   --eval_period=$eval_period \
-  --eval_steps=$eval_steps
+  --eval_steps=$eval_steps \
+  --early_stopping=True \
+  --is_embedding_trainable=False
+  
