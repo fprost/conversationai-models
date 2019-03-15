@@ -140,11 +140,22 @@ class TFRNNModel_warmstart(base_model.BaseModel):
     train_op = optimizer.apply_gradients(
       gradients, global_step=tf.train.get_global_step())
 
+    if mode != tf.estimator.ModeKeys.PREDICT:
+      eval_metric_ops = {
+      'accuracy':
+          tf.metrics.accuracy(
+              labels=multi_class_labels,
+              predictions=predictions)
+      }
+    else:
+      eval_metric_ops = {}
+
     estimator_spec = tf.estimator.EstimatorSpec(
       mode=mode,
       predictions=predictions_dict,
       loss=loss,
-      train_op=train_op)
+      train_op=train_op,
+      eval_metric_ops=eval_metric_ops,)
     
     # estimator_spec = multi_class_head.create_estimator_spec(
     #     features=features,
