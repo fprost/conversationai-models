@@ -33,9 +33,9 @@ tf.app.flags.DEFINE_integer('num_prefetch', 5,
 
 FLAGS = tf.app.flags.FLAGS
 
-DTYPE_MAPPING = {'float': tf.float32, 'int': tf.int64}
+DTYPE_MAPPING = {'float': tf.float32, 'int': tf.int64, 'str': tf.string}
 
-DTYPE_DEFAULT = {'float': -1.0, 'int': -1}
+DTYPE_DEFAULT = {'float': -1.0, 'int': -1, 'str': ''}
 
 
 class TFRecordInput(dataset_input.DatasetInput):
@@ -116,7 +116,12 @@ class TFRecordInput(dataset_input.DatasetInput):
     # Make a deep copy to avoid changing the input.
     new_features = {k: v for k, v in features.items()}
     labels = {}
-    for label in self._labels:
+    for idx, label in enumerate(self._labels):
+      if self._label_dtypes[idx] == 'str':
+        labels[label]= parsed[label]
+        # TODO(fprost): Clean the requirements of weights
+        new_features[label + '_weight'] = tf.constant(1)
+        continue
       label_value = tf.cast(parsed[label], dtype=tf.float32)
       # Missing values are negative, find them and zero those features out.
       weight = tf.cast(tf.greater_equal(label_value, 0.0), dtype=tf.float32)

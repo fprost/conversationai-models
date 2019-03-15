@@ -120,9 +120,10 @@ class TFRNNModel(base_model.BaseModel):
 
 
     optimizer = tf.train.AdamOptimizer(learning_rate=params.learning_rate)
-    return multi_class_head.create_estimator_spec(
+    estimator_spec = multi_class_head.create_estimator_spec(
         features=features,
         labels=multi_class_labels,
         mode=mode,
         logits=logits,
         optimizer=optimizer)
+    return estimator_spec

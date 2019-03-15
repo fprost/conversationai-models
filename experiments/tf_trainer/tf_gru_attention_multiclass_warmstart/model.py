@@ -112,6 +112,9 @@ class TFRNNModel_warmstart(base_model.BaseModel):
     predictions_dict = {'labels': predictions}
     if mode != tf.estimator.ModeKeys.PREDICT:
       multi_class_labels = labels[self._target_labels[0]]
+      table = tf.contrib.lookup.index_table_from_tensor(
+        mapping=tf.constant(['F', 'M']))
+      multi_class_labels = table.lookup(multi_class_labels)
       multi_class_labels = tf.cast(multi_class_labels, tf.int32)
       multi_class_labels = tf.reshape(multi_class_labels, [-1])
       tf.summary.histogram('truth_labels', multi_class_labels)
