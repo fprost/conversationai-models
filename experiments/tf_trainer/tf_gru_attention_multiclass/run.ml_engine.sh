@@ -81,7 +81,7 @@ gcloud ml-engine jobs submit training tf_trainer_${MODEL_NAME_DATA}_${USER}_${DA
     -- \
     --train_path=$train_path \
     --validate_path=$valid_path \
-    --embeddings_path="${GCS_RESOURCES}/glove.6B/glove.6B.100d-normalized.txt" \
+    --embeddings_path="${GCS_RESOURCES}/glove.6B/glove.6B.100d.txt" \
     --model_dir="${JOB_DIR}/model_dir" \
     --labels=$labels \
     --label_dtypes=$label_dtypes \
@@ -95,5 +95,6 @@ gcloud ml-engine jobs submit training tf_trainer_${MODEL_NAME_DATA}_${USER}_${DA
     --train_steps=$train_steps \
     --eval_period=$eval_period \
     --eval_steps=$eval_steps \
+    --n_export=-1 \
     --early_stopping=True \
-    --is_embedding_trainable=True
+    --is_embedding_trainable=False

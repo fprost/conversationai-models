@@ -26,7 +26,7 @@ eval_steps=1000
 python -m tf_trainer.tf_gru_attention_multiclass.run \
   --train_path=$train_path \
   --validate_path=$valid_path \
-  --embeddings_path="${GCS_RESOURCES}/glove.6B/glove.6B.100d-superhard-debiased_03012019.txt" \
+  --embeddings_path="${GCS_RESOURCES}/glove.6B/glove.6B.100d.txt" \
   --model_dir="tf_gru_attention_multiclass_local_model_dir" \
   --labels=$labels \
   --label_dtypes=$label_dtypes \
@@ -40,6 +40,7 @@ python -m tf_trainer.tf_gru_attention_multiclass.run \
   --train_steps=500000 \
   --eval_period=$eval_period \
   --eval_steps=$eval_steps \
+  --n_export=-1 \
   --early_stopping=True \
   --is_embedding_trainable=False
   
