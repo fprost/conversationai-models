@@ -12,22 +12,23 @@
 
 source "tf_trainer/common/dataset_config.sh"
 
-
-batch_size=32
-attention_units=32
-dropout_rate=0.69999994803861521
-learning_rate=0.00030340058446715442
+# Make sure they match previous job
+WARMSTART_DIR='gs://conversationai-models/tf_trainer_runs/fprost/tf_gru_attention_multiclass_biosbias_glove/20190315_113247/model_dir'
 dense_units='128'
-gru_units='128,128'
+gru_units='256'
+attention_units=32
+
+# Pick parameters
+batch_size=16
+learning_rate=0.0001
 train_steps=250000
 eval_period=500
 eval_steps=1000
 
 
-WARMSTART_DIR='/usr/local/google/home/fprost/Documents/Projects/jigsaw/new_repo/conversationai-models/experiments/tf_gru_attention_multiclass_local_model_dir/'
 labels='gender'
 label_dtypes='str'
-
+dropout_rate=0.
 python -m tf_trainer.tf_gru_attention_multiclass_warmstart.run \
   --train_path=$train_path \
   --validate_path=$valid_path \
