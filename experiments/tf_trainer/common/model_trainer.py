@@ -200,9 +200,10 @@ class InitHook(tf.train.SessionRunHook):
         Restore encoder parameters if a pre-trained encoder model is available and we haven't trained previously
         """
         if not self.initialized:
-            checkpoint = tf.train.latest_checkpoint(self.modelPath)
+            checkpoint = self.modelPath #tf.train.latest_checkpoint(self.modelPath)
+            print (self.modelPath)
             if checkpoint is None:
-                tf.logging.info('No pre-trained model is available, training from scratch.')
+                tf.logging.info('No pre-trained model is available for warmstart, training from scratch.')
             else:
                 tf.logging.info('Pre-trained model {0} found in {1} - warmstarting.'.format(checkpoint, self.modelPath))
                 tf.train.warm_start(checkpoint, vars_to_warm_start=self._vars_to_warm_start)
@@ -226,11 +227,10 @@ class ModelTrainer(object):
     if self._warmstart_dir:
       training_hooks.append(InitHook(self._warmstart_dir))
     if FLAGS.enable_profiling:
-      training_hooks = [
+      training_hooks.append(
           tf.train.ProfilerHook(
               save_steps=10,
-              output_dir=os.path.join(self._model_dir(), 'profiler')),
-      ]
+              output_dir=os.path.join(self._model_dir(), 'profiler')))
     if FLAGS.early_stopping:
       min_steps = min(2*FLAGS.eval_period, 500)
       # Need to initialize eval dir, otherwise early will raise an error.
@@ -238,7 +238,7 @@ class ModelTrainer(object):
       early_stopping = tf.contrib.estimator.stop_if_no_decrease_hook(
           self._estimator,
           metric_name='loss',
-          max_steps_without_decrease=20000,
+          max_steps_without_decrease=30000,
           min_steps=min_steps)
       training_hooks.append(early_stopping)
 

@@ -13,10 +13,15 @@
 source "tf_trainer/common/dataset_config.sh"
 
 # Make sure they match previous job
-WARMSTART_DIR='gs://conversationai-models/tf_trainer_runs/fprost/tf_gru_attention_multiclass_biosbias_glove/20190315_113247/model_dir'
+WARMSTART_DIR='/usr/local/google/home/fprost/Documents/Projects/jigsaw/new_repo/conversationai-models/experiments/tf_gru_attention_multiclass_local_model_dir/model.ckpt-59500'
+EMBEDDING_PATH="${GCS_RESOURCES}/glove.6B/glove.6B.100d-hard-debiased_02142019.txt"
+# WARMSTART_DIR='gs://conversationai-models/tf_trainer_runs/fprost/tf_gru_attention_multiclass_biosbias_glove/20190315_112954/model_dir'
+# EMBEDDING_PATH="${GCS_RESOURCES}/glove.6B/glove.6B.100d-normalized.txt"
 dense_units='128'
 gru_units='256'
 attention_units=32
+
+
 
 # Pick parameters
 batch_size=16
@@ -32,7 +37,7 @@ dropout_rate=0.
 python -m tf_trainer.tf_gru_attention_multiclass_warmstart.run \
   --train_path=$train_path \
   --validate_path=$valid_path \
-  --embeddings_path="${GCS_RESOURCES}/glove.6B/glove.6B.100d.txt" \
+  --embeddings_path=$EMBEDDING_PATH \
   --model_dir="tf_gru_attention_multiclass_warmstart_local_model_dir" \
   --labels=$labels \
   --label_dtypes=$label_dtypes \
