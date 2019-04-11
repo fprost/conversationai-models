@@ -15,8 +15,11 @@ source "tf_trainer/common/dataset_config.sh"
 
 
 # Make sure they match previous job
-WARMSTART_DIR='gs://conversationai-models/tf_trainer_runs/fprost/tf_gru_attention_multiclass_biosbias_glove/20190315_112954/model_dir/model.ckpt-112500'
-EMBEDDING_PATH="${GCS_RESOURCES}/glove.6B/glove.6B.100d-normalized.txt"
+ROOT=${MODEL_PARENT_DIR}/${USER}/tf_gru_attention_multiclass_biosbias_glove
+
+WARMSTART_DIR=${ROOT}/20190328_103117/model_dir/model.ckpt-100000
+EMBEDDING_PATH="${GCS_RESOURCES}/glove.6B/0409/glove.6B.100d-normalized.txt"
+
 dense_units='128'
 gru_units='256'
 attention_units=32
@@ -69,4 +72,5 @@ gcloud ml-engine jobs submit training tf_trainer_${MODEL_NAME_DATA}_${USER}_${DA
     --n_export=-1 \
     --early_stopping=True \
     --is_embedding_trainable=False \
+    --using_contrib_forwardfeatures=True \
     --warmstart_dir=$WARMSTART_DIR

@@ -63,6 +63,9 @@ tf.app.flags.DEFINE_integer('eval_period', 1000,
                             'The number of steps per eval period.')
 tf.app.flags.DEFINE_integer('eval_steps', None,
                             'Number of examples to eval for, default all.')
+#TODO: Can we find a way to remove this flag?
+tf.app.flags.DEFINE_bool('using_contrib_forwardfeatures', False,
+    'Whether to use the forward features to export (False if using the head library).')
 
 tf.app.flags.mark_flag_as_required('model_dir')
 
@@ -474,7 +477,11 @@ class ModelTrainer(object):
 
     estimator = self._estimator
     if example_key_name:
-      estimator = self._add_estimator_key(self._estimator, example_key_name)
+      if FLAGS.using_contrib_forwardfeatures:
+        estimator = tf.contrib.estimator.forward_features(
+          self._estimator, keys=example_key_name)
+      else:
+        estimator = self._add_estimator_key(self._estimator, example_key_name)
 
     checkpoints_to_export, checkpoints_to_delete = self._get_list_checkpoint(
       FLAGS.n_export, self._model_dir(), metrics_key, is_first_metric_better_fn)

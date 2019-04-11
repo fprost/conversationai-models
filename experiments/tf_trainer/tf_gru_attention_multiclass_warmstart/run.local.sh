@@ -13,22 +13,21 @@
 source "tf_trainer/common/dataset_config.sh"
 
 # Make sure they match previous job
-WARMSTART_DIR='/usr/local/google/home/fprost/Documents/Projects/jigsaw/new_repo/conversationai-models/experiments/tf_gru_attention_multiclass_local_model_dir/model.ckpt-59500'
-EMBEDDING_PATH="${GCS_RESOURCES}/glove.6B/glove.6B.100d-hard-debiased_02142019.txt"
-# WARMSTART_DIR='gs://conversationai-models/tf_trainer_runs/fprost/tf_gru_attention_multiclass_biosbias_glove/20190315_112954/model_dir'
-# EMBEDDING_PATH="${GCS_RESOURCES}/glove.6B/glove.6B.100d-normalized.txt"
+ROOT=${MODEL_PARENT_DIR}/${USER}/tf_gru_attention_multiclass_biosbias_glove
+
+WARMSTART_DIR=${ROOT}/20190328_103117/model_dir/model.ckpt-100000
+EMBEDDING_PATH="${GCS_RESOURCES}/glove.6B/0409/glove.6B.100d-normalized.txt"
+
 dense_units='128'
 gru_units='256'
 attention_units=32
 
-
-
 # Pick parameters
 batch_size=16
 learning_rate=0.0001
-train_steps=250000
-eval_period=500
-eval_steps=1000
+train_steps=200
+eval_period=50
+eval_steps=100
 
 
 labels='gender'
@@ -48,10 +47,11 @@ python -m tf_trainer.tf_gru_attention_multiclass_warmstart.run \
   --learning_rate=$learning_rate \
   --dense_units=$dense_units \
   --gru_units=$gru_units \
-  --train_steps=500000 \
+  --train_steps=$train_steps \
   --eval_period=$eval_period \
   --eval_steps=$eval_steps \
   --early_stopping=True \
   --is_embedding_trainable=False \
+  --using_contrib_forwardfeatures=True \
   --warmstart_dir=$WARMSTART_DIR
   

@@ -24,8 +24,6 @@ tf.app.flags.DEFINE_string(
     'Comma delimited string for the number of hidden units in the gru layer.')
 tf.app.flags.DEFINE_integer('attention_units', 64,
                             'The number of hidden units in the gru layer.')
-tf.app.flags.DEFINE_integer('n_classes', 33,
-                            'The number of output classes.')
 # This would normally just be a multi_integer, but we use string due to
 # constraints with ML Engine hyperparameter tuning.
 tf.app.flags.DEFINE_string(
@@ -105,63 +103,63 @@ class TFRNNModel_warmstart(base_model.BaseModel):
       logits = tf.layers.dropout(logits, rate=params.dropout_rate)
     
     logits = tf.layers.dense(
-        inputs=logits, units=FLAGS.n_classes, activation=None, name='final_layer')
+        inputs=logits, units=1, activation=None, name='final_layer')
+    logits = tf.reshape(logits, [-1])
     
+    predictions = tf.greater(logits, tf.constant(0.))
+    predictions = tf.cast(predictions, tf.float32)
 
-    predictions = tf.argmax(logits, 1)
-    predictions_dict = {'labels': predictions}
+    predictions_dict = {
+      'labels': predictions,
+      'logits': logits}
     if mode != tf.estimator.ModeKeys.PREDICT:
-      multi_class_labels = labels[self._target_labels[0]]
+      #TODO(fprost): clarify that this model is a binary label (not a multiclass/multilabel).
+      labels = labels[self._target_labels[0]]
       table = tf.contrib.lookup.index_table_from_tensor(
         mapping=tf.constant(['F', 'M']))
-      multi_class_labels = table.lookup(multi_class_labels)
-      multi_class_labels = tf.cast(multi_class_labels, tf.int32)
-      multi_class_labels = tf.reshape(multi_class_labels, [-1])
-      tf.summary.histogram('truth_labels', multi_class_labels)
+      labels = table.lookup(labels)
+      labels = tf.cast(labels, tf.float32)
+      labels = tf.reshape(labels, [-1])
+      tf.summary.histogram('truth_labels', labels)
       tf.summary.histogram('predictions', predictions)
     else:
-      multi_class_labels = None
-
-
-    optimizer = tf.train.AdamOptimizer(learning_rate=params.learning_rate)
-    loss = tf.losses.sparse_softmax_cross_entropy(
-      labels=multi_class_labels, logits=logits)
-
-    vars_to_train = []
-    for var in ops.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES):
-      if 'final_layer' in var.name:
-        vars_to_train.append(var)
-    tf.logging.info ('Training only the following variables: {}'.format(
-      vars_to_train))
-
-    gradients = optimizer.compute_gradients(
-      loss=loss,
-      var_list=vars_to_train)
-    train_op = optimizer.apply_gradients(
-      gradients, global_step=tf.train.get_global_step())
+      labels = None
 
     if mode != tf.estimator.ModeKeys.PREDICT:
+      optimizer = tf.train.AdamOptimizer(learning_rate=params.learning_rate)
+      loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+        labels=labels,
+        logits=logits))
+
+      vars_to_train = []
+      for var in ops.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES):
+        if 'final_layer' in var.name:
+          vars_to_train.append(var)
+      tf.logging.info ('Training only the following variables: {}'.format(
+        vars_to_train))
+
+      gradients = optimizer.compute_gradients(
+        loss=loss,
+        var_list=vars_to_train)
+      train_op = optimizer.apply_gradients(
+        gradients, global_step=tf.train.get_global_step())
+
       eval_metric_ops = {
       'accuracy':
           tf.metrics.accuracy(
-              labels=multi_class_labels,
+              labels=labels,
               predictions=predictions)
       }
     else:
       eval_metric_ops = {}
+      loss = None
+      train_op = None
 
     estimator_spec = tf.estimator.EstimatorSpec(
       mode=mode,
       predictions=predictions_dict,
       loss=loss,
       train_op=train_op,
-      eval_metric_ops=eval_metric_ops,)
-    
-    # estimator_spec = multi_class_head.create_estimator_spec(
-    #     features=features,
-    #     labels=multi_class_labels,
-    #     mode=mode,
-    #     logits=logits,
-    #     optimizer=optimizer)
+      eval_metric_ops=eval_metric_ops)
       
     return estimator_spec
